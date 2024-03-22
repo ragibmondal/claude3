@@ -1,9 +1,8 @@
 import streamlit as st
 import anthropic
-from claude import ClaudeLlm  # Import the ClaudeLlm class from claude.py
+from claude import ClaudeLlm
 import os
 import base64
-import os
 
 # Get API key from the environment variable
 api_key = os.environ.get("ANTHROPIC_API_KEY")
@@ -14,6 +13,10 @@ if not api_key:
    st.stop()
 
 client = anthropic.Anthropic(api_key=api_key)
+
+# Initialize user chat history
+if "chat_history" not in st.session_state:
+   st.session_state.chat_history = []
 
 # Mode selection
 mode = st.sidebar.radio("Please choose a mode", ('Text', 'Vision'))
@@ -29,21 +32,18 @@ if mode == 'Text':
    if st.button("Send"):
        # Create an instance of ClaudeLlm class
        claude = ClaudeLlm(client, user_input)
-       col1, col2 = st.columns(2)  # Split the screen into two columns
 
-       with col1:
-           st.write("Opus response:")
-           st.write_stream(claude.generate_responses("claude-3-opus-20240229"))
+       st.write("Opus response:")
+       opus_response = claude.generate_responses("claude-3-opus-20240229")
+       st.write_stream(opus_response)
 
-       with col2:
-           st.write("Sonnet response:")
-           st.write_stream(claude.generate_responses("claude-3-sonnet-20240229"))
+       # Append user input and Opus response to chat history
+       st.session_state.chat_history.append({"user": user_input, "assistant": opus_response})
 
-       # Display cost calculation results
-       st.table(claude.cost_df)
-
-       _, jpy_rate = claude.convert_usd_to_jpy(1)  # dummy call to get the exchange rate of 1USD
-       st.write(jpy_rate)
+       # Display chat history
+       for chat in st.session_state.chat_history:
+           st.write("User:", chat["user"])
+           st.write("Assistant:", chat["assistant"])
 
 elif mode == 'Vision':
    st.title("Claude3-Streamlit-vision")
@@ -89,18 +89,15 @@ elif mode == 'Vision':
        if st.button("Send"):
            # Create an instance of ClaudeLlm class
            claude = ClaudeLlm(client, user_input)
-           col1, col2 = st.columns(2)  # Split the screen into two columns
 
-           with col1:
-               st.write("Opus response:")
-               st.write_stream(claude.generate_responses("claude-3-opus-20240229"))
+           st.write("Opus response:")
+           opus_response = claude.generate_responses("claude-3-opus-20240229")
+           st.write_stream(opus_response)
 
-           with col2:
-               st.write("Sonnet response:")
-               st.write_stream(claude.generate_responses("claude-3-sonnet-20240229"))
+           # Append user input and Opus response to chat history
+           st.session_state.chat_history.append({"user": f"Image: {prompt}", "assistant": opus_response})
 
-           # Display cost calculation results
-           st.table(claude.cost_df)
-
-           _, jpy_rate = claude.convert_usd_to_jpy(1)  # dummy call to get the exchange rate of 1USD
-           st.write(jpy_rate)
+           # Display chat history
+           for chat in st.session_state.chat_history:
+               st.write("User:", chat["user"])
+               st.write("Assistant:", chat["assistant"])
